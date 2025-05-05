@@ -1,27 +1,34 @@
 // src/app/products/[id]/page.tsx
-'use client'
+import { notFound } from 'next/navigation'
 
-import useSWR from 'swr'
+interface Product {
+  id: number
+  title: string
+  description: string
+  price: number
+  image: string
+  category: string
+  rating: { rate: number; count: number }
+}
 
-const fetcher = (url: string) =>
-  fetch(url).then((res) => {
-    if (!res.ok) throw new Error('Failed to fetch')
-    return res.json()
-  })
-
-export default function ProductPage({
+export default async function ProductPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
-  const { data: product, error } = useSWR(
-    id ? `https://fakestoreapi.com/products/${id}` : null,
-    fetcher
-  )
+  // await the promise
+  const { id } = await params
+  // force SSR on every request
+  const res = await fetch(`https://fakestoreapi.com/products/${id}`, {
+    cache: 'no-store',
+  })
 
-  if (!product && !error) return <p>Loading…</p>
-  if (error) return <p style={{ color: 'red' }}>Error: {(error as Error).message}</p>
+  if (!res.ok) {
+    // render Next.js 404 page
+    notFound()
+  }
+
+  const product: Product = await res.json()
 
   return (
     <div style={{ maxWidth: 600, margin: '2rem auto', textAlign: 'center' }}>
